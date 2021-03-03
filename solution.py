@@ -1,5 +1,6 @@
 from copy import deepcopy
 from operator import itemgetter
+from random import randint
 from time import time
 
 from data import Data
@@ -72,19 +73,19 @@ class Solution:
                 print('Inserting order ',orderId, order.durationList)
                 if order.id in ordersToGo:  
                     candidates = []  
-                    for machine in order.machines:  
-                        machineCandidates = []   
+                    for machine in order.machines:    
                         for i in range(len(solution[machine])+1):    
                             solutionCopy = deepcopy(solution)
                             solutionCopy[machine].insert(i,order.id)
-                            singleMachineList = solutionCopy[machine]
-                            tardiness, makespan = Solution.calculateSingleMachine(solutionCopy[machine], machine)
-                            machineCandidates.append([tardiness,makespan, solutionCopy])
+                            
+                            # singleMachineList = solutionCopy[machine]
+                            # tardiness, makespan = Solution.calculateSingleMachine(solutionCopy[machine], machine)
+                            solutionCopyObj = Solution(solutionCopy)                            
+                            candidates.append(solutionCopyObj)
                             #print(tardiness, makespan)
-                        machineCandidatesSorted = sorted(machineCandidates, key= lambda x: (x[0], x[1]))
-                        candidates += machineCandidatesSorted
-                    candidatesSorted = sorted(candidates, key= lambda x: (x[0], x[1]))
-                    solution = candidatesSorted[0][2]
+                        
+                    candidatesSorted = sorted(candidates, key= lambda x: (x.tardiness, x.makespan))
+                    solution = candidatesSorted[randint(0,int(len(candidatesSorted)/8))]._solution
                     ordersToGo.remove(orderId)
         print("Initial solution time: ", time()-startTime)
         return Solution(solution)
@@ -118,7 +119,10 @@ class Solution:
             
             self.machineTotals[machine] = runningTotal
             self.machineTardiness[machine] = runningTardiness
-
+            
+        # self.numberOfOrders = sum([len(self._solution[i]) for i in range(Data.num_machines)])
+        # print('number of orders in solution: ', self.numberOfOrders)
+        
         self.total = sum(self.machineTotals)
         self.tardiness = sum(self.machineTardiness)
         self.makespan = max(self.machineTotals)
@@ -239,8 +243,8 @@ class Solution:
             return True
         if self.tardiness < outra.tardiness:
             return True
-        if self.total < outra.total:
-            return True
+        # if self.total < outra.total:
+        #     return True
         return False
 
 

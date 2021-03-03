@@ -35,35 +35,54 @@ def TabuSearch(initial_solution):
         print('\n Iteration: ', i, '------------------------------------------')
         neighborhood, hasBetter = scanNeighborhood(current_solution)
         
-        for solution in neighborhood:
-            if solution.isBetter(current_solution) and not solution.is_tabu(assignment_tabus, sequencing_tabus): #check better tardiness and tabu
-                if current_solution._isSequencingNeighbor:
-                    sequencing_tabus.append(current_solution._tabu)
-                    if len(sequencing_tabus) > 5:
-                        sequencing_tabus.popleft()
-                else:
-                    assignment_tabus.append(current_solution._tabu)
-                    if len(assignment_tabus) > 5:
-                        assignment_tabus.popleft()
-                current_solution = solution #update current solution
-                
-                if current_solution.tardiness < best_solution.tardiness: #compare to best
-                    best_solution = current_solution #update best
-                    counter = 0 #reset counter
-                elif current_solution.tardiness == best_solution.tardiness:
+        if hasBetter:
+            neighborCounter = 0
+            neighborPicked = 0
+            if current_solution._isSequencingNeighbor:
+                sequencing_tabus.append(current_solution._tabu)
+                if len(sequencing_tabus) > 10:
+                    sequencing_tabus.popleft()
+            else:
+                assignment_tabus.append(current_solution._tabu)
+                if len(assignment_tabus) > 10:
+                    assignment_tabus.popleft()
+            current_solution = neighborhood
+            neighborPicked = neighborCounter
+            if current_solution.tardiness < best_solution.tardiness: #compare to best
+                best_solution = current_solution #update best
+                counter = 0 #reset counter
+        #  elif current_solution.tardiness == best_solution.tardiness:
+            if current_solution.makespan < best_solution.makespan:
+                best_solution = current_solution
+                counter= 0
+        else: 
+            neighborCounter = 0
+            neighborPicked = 0
+            for solution in neighborhood: 
+                neighborCounter += 1 
+                if solution.isBetter(current_solution) and not solution.is_tabu(assignment_tabus, sequencing_tabus): #check better tardiness and tabu
+                    if current_solution._isSequencingNeighbor:
+                        sequencing_tabus.append(current_solution._tabu)
+                        if len(sequencing_tabus) > 10:
+                            sequencing_tabus.popleft()
+                    else:
+                        assignment_tabus.append(current_solution._tabu)
+                        if len(assignment_tabus) > 10:
+                            assignment_tabus.popleft()
+                    current_solution = solution #update current solution
+                    neighborPicked = neighborCounter
+                    if current_solution.tardiness < best_solution.tardiness: #compare to best
+                        best_solution = current_solution #update best
+                        counter = 0 #reset counter
+                #  elif current_solution.tardiness == best_solution.tardiness:
                     if current_solution.makespan < best_solution.makespan:
                         best_solution = current_solution
                         counter= 0
-                break
+                    break
 
-        if current_solution.makespan >= best_solution.makespan:
-            counter += 1
-            if counter == 5:
-                if tardiness_reset_counter == 5:
-                    current_solution = best_solution
-                    counter = 0
-                    tardiness_reset_counter = 0
-                else: 
+            if current_solution.makespan >= best_solution.makespan:
+                counter += 1
+                if counter == 5:
                     if current_solution._isSequencingNeighbor:
                         sequencing_tabus.append(current_solution._tabu)
                         if len(sequencing_tabus) > 5:
@@ -72,17 +91,13 @@ def TabuSearch(initial_solution):
                         assignment_tabus.append(current_solution._tabu)
                         if len(assignment_tabus) > 5:
                             assignment_tabus.popleft()
-                    #tabus.append(current_solution)
-                    
                     rand_index = randint(1, int(0.5* len(neighborhood)))
+                    #current_solution= best_solution
                     current_solution = neighborhood[rand_index]
+                    neighborPicked = rand_index + 1
                     counter = 0
         
-        # if hasBetter:
-        #     current_solution = current_solution.updateSolution(neighborhood, assignment_tabus, sequencing_tabus, stuckCounter)
-        # else: 
-        #     current_solution = neighborhood[randint(int(len(neighborhood)/2),len(neighborhood))]
-        #     # current_solution = current_solution.updateFromNeighborhood(neighborhood, assignment_tabus, sequencing_tabus, stuckCounter)
+
 
         # if current_solution.isBetter(best_solution):
         #     best_solution = current_solution
@@ -97,6 +112,7 @@ def TabuSearch(initial_solution):
         #     stuckCounter = 0
 
         print('Iteration: ', i, '----------------------', time()-start_time,'--------------------')
+        print('Iteration: ', i, ' Neighborhood sizes: ', len(assignment_tabus), len(sequencing_tabus))
         print('Iteration: ', i, ' Current solution: ', current_solution._solution)
         print('Iteration: ', i, ' Current solution: ', [current_solution.makespan, current_solution.tardiness])
         print('Iteration: ', i, ' Best solution: ', [best_solution.makespan, best_solution.tardiness])
