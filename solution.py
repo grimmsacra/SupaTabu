@@ -29,38 +29,6 @@ class Solution:
         self._tabu = []
 
     @staticmethod
-    def initial_solution_EDD():
-        solution = {i: [] for i in range(0,Data.num_machines)}
-        solution_ops = {i:[] for i in range(0,Data.num_machines)}
-        last_op_on_machine = [0] * Data.num_machines
-        current_machine_time = [0] * Data.num_machines
-        
-        for ordertuple in Data.orders.itertuples():
-            order = ordertuple[0]
-            op = ordertuple[1]
-            qtd = ordertuple[2]
-            due = ordertuple[3]
-            proctimes = Data.proctimes[op-1]
-            proctimes_no_nans = proctimes[~proctimes.isnull()]
-            sorted_proctimes = proctimes_no_nans.sort_values()
-            for index, t in sorted_proctimes.iteritems():
-                times = qtd * t
-                if not last_op_on_machine[index]:
-                    setup = 0
-                else: 
-                    setup = Data.setups.iloc[op-1][last_op_on_machine[index]-1]
-                total = times + setup
-                if due < current_machine_time[index] + total:
-                    continue
-                else:
-                    solution[index].append(order)
-                    solution_ops[index].append(op)
-                    current_machine_time[index] += total
-                    last_op_on_machine[index] = op
-                    break              
-        return Solution(solution)
-
-    @staticmethod
     def initial_solution():
         print('Generating Initial Solution')
         startTime = time()
@@ -84,7 +52,7 @@ class Solution:
                             candidates.append(solutionCopyObj)
                             #print(tardiness, makespan)
                         
-                    candidatesSorted = sorted(candidates, key= lambda x: (x.tardiness, x.makespan))
+                    candidatesSorted = sorted(candidates, key= lambda x: (x.tardiness, x.total))
                     solution = candidatesSorted[randint(0,int(len(candidatesSorted)/8))]._solution
                     ordersToGo.remove(orderId)
         print("Initial solution time: ", time()-startTime)
@@ -173,80 +141,12 @@ class Solution:
                         return True                             
         return False
 
-    def updateSolution(self, newSolution, assignment_tabus, sequencing_tabus, stuckCounter, updateCounter = True):
-        if updateCounter: 
-            updated = True
-            stuckCounter = 0
-        else:
-            stuckCounter += 1
-        if newSolution._isSequencingNeighbor:
-            sequencing_tabus.append(newSolution._tabu)
-            if len(sequencing_tabus) > 5:
-                sequencing_tabus.popleft()
-        else:
-            assignment_tabus.append(newSolution._tabu)
-            if len(assignment_tabus) > 5:
-                assignment_tabus.popleft()
-        return newSolution
-
-    def updateFromNeighborhood(self, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter):
-        isReturn, solution = Solution.firstScan(self, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter)
-        return solution if isReturn else null
-
-        isReturn, solution = Solution.secondScan(self, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter)
-        return solution if isReturn else null
-    
-        isReturn, solution = Solution.thirdScan(self, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter)
-        return solution if isReturn else null
-
-        isReturn, solution = Solution.fourthScan(self, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter)
-        return solution if isReturn else null
-
-    def firstScan(currentSolution, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter):
-        for solution in neighborhood:
-            if solution.is_tabu(assignment_tabus, sequencing_tabus):
-                break
-            if solution.betterTardiness(currentSolution):
-                currentSolution.updateSolution(solution, assignment_tabus, sequencing_tabus, stuckCounter)
-                return True, solution
-            if solution.betterMakespan(currentSolution):
-                currentSolution.updateSolution(solution, assignment_tabus, sequencing_tabus, stuckCounter)
-                return True, solution
-        return False, currentSolution
-        
-    def secondScan(currentSolution, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter):
-        for solution in neighborhood:
-            if solution.betterTardiness(currentSolution):
-                currentSolution.updateSolution(solution, assignment_tabus, sequencing_tabus, stuckCounter)
-                return True, solution
-            if solution.betterMakespan(currentSolution):
-                scurrentSolutionelf.updateSolution(solution, assignment_tabus, sequencing_tabus, stuckCounter)
-                return True, solution
-        return False, currentSolution
-
-    def thirdScan(currentSolution, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter):
-        for solution in neighborhood:
-            if solution.notMuchWorse(currentSolution):
-                currentSolution.updateSolution(solution, assignment_tabus, sequencing_tabus, stuckCounter, False)
-                return True, solution
-        return False, currentSolution 
-                
-    def fourthScan(currentSolution, neighborhood, assignment_tabus, sequencing_tabus, stuckCounter):
-        for solution in neighborhood:
-            if solution.considerablyWorse(currentSolution): 
-                currentSolution.updateSolution(solution, assignment_tabus, sequencing_tabus, stuckCounter, False)
-                return True, solution 
-        return False, currentSolution
-
     def isBetter(self, outra):
         if self.makespan < outra.makespan and self.tardiness <= outra.tardiness:
             return True
-        if self.tardiness < outra.tardiness:
+        if self.tardiness < outra.tardiness and self.makespan <= outra.makespan:
             return True
-        # if self.total < outra.total:
-        #     return True
         return False
-
 
     def betterMakespan(self, currentBest):
         if self.tardiness > currentBest.tardiness:
@@ -259,26 +159,5 @@ class Solution:
     
     def betterTardiness(self, outra):
         if self.tardiness < outra.tardiness:
-            return True
-        return False
-
-    def notMuchWorse(self,outra):
-        if outra.tardiness > 0:
-            if self.makespan <= outra.makespan + 2000:
-                return True
-            if self.tardiness <= outra.makespan + 2000:
-                return True
-        if outra.tardiness == 0:
-            if self.makespan <= outra.makespan + 2000 and self.tardiness <= outra.tardiness + 500:
-                return True
-        return False
-
-    def considerablyWorse(self,outra):
-        if self.tardiness > 0:
-            if self.makespan <= outra.makespan + 5000:
-                return True
-        if self.betterMakespan(outra):
-            return True
-        if self.tardiness <= outra.tardiness + 2000:
             return True
         return False

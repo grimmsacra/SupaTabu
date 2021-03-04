@@ -9,54 +9,26 @@ from orders import Order
 from solution import Solution
 
 
-class Neighborhood:
-    def __init__(self, originalSolution):
-        self.solutions = []
-        self.originalSolution = originalSolution
-    
-    def join(self,neighborhood):
-        self.solutions += neighborhood.solutions
-        return self.solutions
-
-    def add(self, solution):
-        self.solutions.append(solution)
-        print(len(self.solutions))
-            
-    def remove(self, solution):
-        self.solutions.delete(solution)
-
-    def getNeigborBest(self):
-        return self.solutions[0]
-
-    def sortNeighborhood(self):
-        if self.originalSolution.tardiness > 0: 
-            self.solutions = sorted(self.solutions, key = lambda x: (x.tardiness, x.makespan))
-        self.printNeighborhoodScores()
-
-    def printNeighborhoodScores(self):
-        aux = [[x.makespan, x.tardiness] for x in self.solutions]
-        aux2 = [x._solution for x in self.solutions]
-        print(aux[:10])
-        #print(aux2[:10])
-
-def scanNeighborhood(solution):
+def scanNeighborhood(solution, best):
     start_time = time()
     
-    sequencing, hasBetter = get_sequencing_neighbor(solution)
+    sequencing, hasBetter = get_sequencing_neighbor(solution, best)
     if hasBetter:
+        print('Found a better solution.')
         return sequencing, True
     
-    assignment, hasBetter = get_assignment_neighbor(solution)
+    assignment, hasBetter = get_assignment_neighbor(solution, best)
     if hasBetter:
+        print('Found a better solution.')
         return assignment, True    
     sequencing += assignment
     
-    finalNeighborhood =  sorted(sequencing, key= lambda x: (x.tardiness, x.makespan))
+    finalNeighborhood =  sorted(sequencing, key= lambda x: (x.tardiness,x.makespan))
     
     print('Neighborhood size: ', len(finalNeighborhood), ' ', time()-start_time, ' seconds')
     return finalNeighborhood, False
 
-def get_assignment_neighbor(solution):
+def get_assignment_neighbor(solution, best):
     startTime = time()
         
     criticalPath = solution.criticalPath
@@ -87,18 +59,15 @@ def get_assignment_neighbor(solution):
                 neighbor._tabu = [orderId,criticalMachine]
                 assignmentNeighbors.append(neighbor)
       
-                # if len(assignmentNeighbors) > 100:
-                #     print('Generated Assignment Neighbors: ', len(assignmentNeighbors), '   ', time()-startTime)
-                #     return assignmentNeighbors, False
+                if len(assignmentNeighbors) > 75:
+                    return assignmentNeighbors, False
       
-                if neighbor.isBetter(solution):
-                    # print('Found a better solution in :', time()-startTime)
+                if neighbor.isBetter(best):
                     return neighbor, True
-        
-    # print('Generated Assignment Neighbors: ', len(assignmentNeighbors), '   ', time()-startTime)
+    
     return assignmentNeighbors, False
 
-def get_sequencing_neighbor(solution):
+def get_sequencing_neighbor(solution, best):
     startTime = time()
     criticalPath = solution.criticalPath
     criticalMachine = solution.criticalMachine
@@ -120,13 +89,10 @@ def get_sequencing_neighbor(solution):
             
             sequencingNeighbors.append(neighbor)
         
-            # if len(sequencingNeighbors) > 100:
-            #     print('Generated Sequencing neighbors, Time:  ', len(sequencingNeighbors), '  ', time()-startTime)
-            #     return sequencingNeighbors, False 
+            if len(sequencingNeighbors) > 75:
+                return sequencingNeighbors, False 
             
-            if neighbor.isBetter(solution):
-                # print('Found a better solution in :', time()-startTime)
+            if neighbor.isBetter(best):
                 return neighbor, True
     
-    # print('Generated Sequencing neighbors, Time:  ', len(sequencingNeighbors), '  ', time()-startTime)
     return sequencingNeighbors, False
